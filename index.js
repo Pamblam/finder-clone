@@ -36,7 +36,7 @@ class FSEntry {
 	}
 
 	getName() {
-		return `<i class="fa-solid fa-angle-right" ${(this.kind.toLowerCase() == 'folder' ? '' : `style='opacity:0'`)}></i> ${this.getIcon()} ${this.name}`;
+		return `<span class='ft-name-span'><i class="fa-solid fa-angle-right" ${(this.kind.toLowerCase() == 'folder' ? '' : `style='opacity:0'`)}></i> ${this.getIcon()} ${this.name}</span>`;
 	}
 
 	getSize() {
@@ -109,6 +109,7 @@ class FSTable {
 		});
 		entries.forEach(entry => {
 			let row = document.createElement('div');
+			row.dataset.eid = entry.id;
 			row.classList.add('ft-tr');
 			['Name', 'Size', 'Kind', 'Date'].forEach(prop => {
 				let col = document.createElement('div');
@@ -136,12 +137,53 @@ class FSTable {
 				this.renderTable();
 			});
 		});
+
+		// Add folder event listener
+		this.table.querySelectorAll(`.ft-name-span`).forEach(na=>{
+			na.addEventListener('click', e=>{
+				e.preventDefault();
+				let arr = na.parentElement.querySelector('.fa-angle-right');
+				this.animate(arr, 'transform', 0, 90, v=>`rotate(${v}deg)`, 500);
+			});
+		});
 	}
 
 	addEntries(entries) {
-		this.entries.push(...entries);
-		this.entry_counter += entries.length;
+		this.entries.push(...entries.map(e=>{
+			e.id = this.entry_counter;
+			this.entry_counter++;
+			return e;
+		}));
 		this.renderTable();
+	}
+
+	animate(element, style_property, start_value, end_value, unit, duration) {
+		return new Promise((resolve, reject) => {
+			let start_time = Date.now();
+			let diff = Math.abs(start_value - end_value);
+			(function frame() {
+				requestAnimationFrame(() => {
+					let time_passed = Date.now() - start_time;
+					let percent = time_passed / duration;
+					let position_change = diff * percent;
+					let position;
+					if (start_value > end_value) {
+						position = Math.max(start_value - position_change, end_value);
+					} else {
+						position = Math.min(start_value + position_change, end_value);
+					}
+					let value;
+					if('function' === typeof unit){
+						value = unit(position);
+					}else{
+						value = `${position}${unit}`;
+					}
+					element.style[style_property] = value;
+					if (position == end_value) resolve();
+					else frame();
+				});
+			})();
+		});
 	}
 }
 
