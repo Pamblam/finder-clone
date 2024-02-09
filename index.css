@@ -57,9 +57,13 @@
 	color: rgb(154, 154, 153);
   }
   
-  .ft-tr:nth-child(odd){
+  .ft-tr-odd{
 	background-color: rgb(41, 41, 39);
   }
+
+  /* .ft-tr:nth-child(odd){
+	background-color: rgb(41, 41, 39);
+  } */
   
   i.fas{
 	pointer-events: none;

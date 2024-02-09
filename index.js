@@ -150,13 +150,14 @@ class FSTable {
 
 		// add the entries
 		let entries = this.getSortedEntries(this.entries);
-		(function renderEntries(context, entries, parent_id=null, parent_expanded=true, indent_level=0){
+		(function renderEntries(context, entries, parent_id=null, parent_expanded=true, indent_level=0, ancestor_collapsed=false){
 			entries.forEach(entry => {
 				let row = document.createElement('div');
 				row.dataset.eid = entry.id;
 				row.classList.add('ft-tr');
-				if(!parent_expanded){
+				if(!parent_expanded || ancestor_collapsed){
 					row.style.display = 'none';
+					ancestor_collapsed = true;
 				}
 				if(parent_id){
 					row.dataset.pid = parent_id;
@@ -178,11 +179,12 @@ class FSTable {
 				// Render children rows
 				if(entry.kind.toLowerCase() === 'folder' && Array.isArray(entry.children)){
 					let entries = context.getSortedEntries(entry.children);
-					renderEntries(context, entries, entry.id, entry.expanded, indent_level+1);
+					renderEntries(context, entries, entry.id, entry.expanded, indent_level+1, ancestor_collapsed);
 				}
 
 			});
 		})(this, entries);
+		this.addTableStripes();
 
 		// Add header event listener
 		this.table.querySelectorAll(`.ft-th > div`).forEach(th=>{
@@ -228,12 +230,13 @@ class FSTable {
 						let arr = na.parentElement.querySelector('.fa-angle-right');
 						await this.animate(arr, 'transform', 90, 0, v=>`rotate(${v}deg)`, 150);
 
-						// hide the children entries
-						document.querySelectorAll(`.ft-tr[data-pid="${entry_id}"]`).forEach(child_row=>{
-							child_row.style.display = 'none';
+						// hide ALL the children entries
+						this.getAllChildrenIds(entry).forEach(entry_id=>{
+							document.querySelector(`.ft-tr[data-eid="${entry_id}"]`).style.display = 'none';
 						});
 
 						entry.expanded = false;
+						this.addTableStripes();
 					}else{
 						// Expand a folder
 						let promises = this.user_callbacks['folder.expand'].map(cb=>{
@@ -249,12 +252,21 @@ class FSTable {
 						let arr = na.parentElement.querySelector('.fa-angle-right');
 						await this.animate(arr, 'transform', 0, 90, v=>`rotate(${v}deg)`, 150);
 
-						// show the children entries
-						document.querySelectorAll(`.ft-tr[data-pid="${entry_id}"]`).forEach(child_row=>{
-							child_row.style.display = null;
-						});			
+						// show the children entries that are expanded
+						(function iterateChildren(e, shown){
+							if(Array.isArray(e.children)){
+								e.children.forEach(ch=>{
+									document.querySelector(`.ft-tr[data-eid="${ch.id}"]`).style.display = shown ? null : 'none';
+									if(ch.kind === 'Folder'){
+										if(!ch.expanded) shown = false;
+										iterateChildren(ch, shown);
+									}
+								});
+							}
+						})(entry, true);		
 
 						entry.expanded = true;
+						this.addTableStripes();
 					}
 				}else{
 					// File is clicked
@@ -266,6 +278,36 @@ class FSTable {
 				
 			});
 		});
+	}
+
+	addTableStripes(){
+		let idx = 0;
+		this.table.querySelectorAll(`.ft-tr`).forEach((tr)=>{
+			if(tr.style.display && tr.style.display === 'none') return;
+			if(idx % 2 === 0){
+				if(!tr.classList.contains('ft-tr-odd')){
+					tr.classList.add('ft-tr-odd');
+				}
+			}else{
+				if(tr.classList.contains('ft-tr-odd')){
+					tr.classList.remove('ft-tr-odd');
+				}
+			}
+			idx++;
+		});
+	}
+
+	getAllChildrenIds(entry){
+		let ids = [];
+		(function getIds(e){
+			if(Array.isArray(e.children)){
+				e.children.forEach(ch=>{
+					ids.push(ch.id);
+					if(ch.kind === 'Folder') getIds(ch);
+				});
+			}
+		})(entry);
+		return ids;
 	}
 
 	addEntries(entries, parent_entry=null) {
@@ -328,12 +370,26 @@ let ele = document.querySelector('#fstable');
 let fsTable = new FSTable(ele);
 
 fsTable.on('folder.expand', function(entry){
-	document.getElementById('last_action').innerHTML = `Expanded folder: ${entry.getPath()}`;
+	let path = entry.getPath();
+	document.getElementById('last_action').innerHTML = `Expanded folder: ${path}`;
 	if(!entry.children){
-		fsTable.addEntries([
-			new FSEntry("anpther test.png", 123437451, "Image", 123431234),
-			new FSEntry("ntoes.xls", null, "Spreadsheet", 345653456),
-		], entry);
+
+		if('/my docs/' === path){
+			fsTable.addEntries([
+				new FSEntry("anpther test.png", 123437451, "Image", 123431234),
+				new FSEntry("ntoes.xls", 123439451, "Spreadsheet", 345653456),
+				new FSEntry("favorite files", null, "Folder", 345657456),
+			], entry);
+		}
+
+		if('/my docs/favorite files/' === path){
+			fsTable.addEntries([
+				new FSEntry("my presentation.ppt", 123437451, "Powerpoint", 123431234),
+				new FSEntry("nintendo cheat codes.txt", 123939451, "File", 345653456)
+			], entry);
+		}
+
+		
 	}
 });
 
