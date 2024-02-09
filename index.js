@@ -6,6 +6,7 @@ class FSEntry {
 		this.date = date;
 		this.children = null;
 		this.parent = null;
+		this.expanded = false;
 	}
 
 	getIcon() {
@@ -35,8 +36,16 @@ class FSEntry {
 		}
 	}
 
-	getName() {
-		return `<span class='ft-name-span'><i class="fa-solid fa-angle-right" ${(this.kind.toLowerCase() == 'folder' ? '' : `style='opacity:0'`)}></i> ${this.getIcon()} ${this.name}</span>`;
+	getName(indent_level=0) {
+		// We render the carat even for non-folder entries
+		// this way everything stays evenly lined up
+		// for non-folder entries we just make it invisible
+		let opacity = this.kind.toLowerCase() == 'folder' ? '1' : `0`;
+		let rotation = this.expanded ? 90 : 0;
+		let carat_style = `style="opacity: ${opacity}; transform: rotate(${rotation}deg);"`;
+		let carat = `<i class="fa-solid fa-angle-right" ${carat_style}></i>`;
+		let indent = "&nbsp;&nbsp;&nbsp;&nbsp;".repeat(indent_level);
+		return `<span class='ft-name-span'>${indent}${carat} ${this.getIcon()} ${this.name}</span>`;
 	}
 
 	getSize() {
@@ -53,6 +62,7 @@ class FSEntry {
 		} while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
 		return bytes.toFixed(1) + ' ' + units[u];
 	}
+
 	getKind() {
 		return this.kind;
 	}
@@ -64,17 +74,56 @@ class FSEntry {
 			day: 'numeric',
 		});
 	}
+
+	getPath(path_separator='/'){
+		let parent = this.parent;
+		let path_parts = [this.name];
+		while(parent !== null){
+			path_parts.unshift(parent.name);
+			parent = parent.parent;
+		}
+		let path = path_separator + path_parts.join(path_separator);
+		if(this.kind === 'Folder') path += path_separator;
+		return path;
+	}
 }
 
 class FSTable {
-	constructor(ele) {
+	constructor(ele, onExpand) {
 		this.entry_counter = 0;
 		this.table = document.createElement('div');
 		this.entries = [];
+		this.entries_map = {};
 		this.table.classList.add('ft-table');
 		this.sort_col = 'Name';
-		this.sort_dir = 'asc'
+		this.sort_dir = 'asc';
+		this.user_callbacks = {
+			'folder.expand': [],
+			'folder.collapse': [],
+			'file.click': []
+		};
+		this.onExpand = onExpand;
 		ele.replaceWith(this.table);
+	}
+
+	on(event, callback){
+		this.user_callbacks[event].push(callback);
+	}
+
+	off(event, callback){
+		this.user_callbacks[event] = this.user_callbacks[event].filter(cb=>{
+			return cb !== callback;
+		});
+	}
+
+	getSortedEntries(entries){
+		return [...entries].sort((e1, e2)=>{
+			let a = e1[this.sort_col.toLowerCase()];
+			let b = e2[this.sort_col.toLowerCase()];
+			if(a == b) return 0;
+			if(a > b) return this.sort_dir === 'asc' ? 1 : -1;
+			if(a < b) return this.sort_dir === 'asc' ? -1 : 1;
+		});
 	}
 
 	renderTable(){
@@ -100,57 +149,137 @@ class FSTable {
 		this.table.appendChild(header);
 
 		// add the entries
-		let entries = [...this.entries].sort((e1, e2)=>{
-			let a = e1[this.sort_col.toLowerCase()];
-			let b = e2[this.sort_col.toLowerCase()];
-			if(a == b) return 0;
-			if(a > b) return this.sort_dir === 'asc' ? 1 : -1;
-			if(a < b) return this.sort_dir === 'asc' ? -1 : 1;
-		});
-		entries.forEach(entry => {
-			let row = document.createElement('div');
-			row.dataset.eid = entry.id;
-			row.classList.add('ft-tr');
-			['Name', 'Size', 'Kind', 'Date'].forEach(prop => {
-				let col = document.createElement('div');
-				col.classList.add(`ft-td-${prop.toLowerCase()}`);
-				col.innerHTML = entry[`get${prop}`]();
-				row.appendChild(col);
+		let entries = this.getSortedEntries(this.entries);
+		(function renderEntries(context, entries, parent_id=null, parent_expanded=true, indent_level=0){
+			entries.forEach(entry => {
+				let row = document.createElement('div');
+				row.dataset.eid = entry.id;
+				row.classList.add('ft-tr');
+				if(!parent_expanded){
+					row.style.display = 'none';
+				}
+				if(parent_id){
+					row.dataset.pid = parent_id;
+				}
+				['Name', 'Size', 'Kind', 'Date'].forEach(prop => {
+					let col = document.createElement('div');
+					col.classList.add(`ft-td-${prop.toLowerCase()}`);
+					let htmlContent;
+					if('Name' === prop){
+						htmlContent = entry.getName(indent_level);
+					}else{
+						htmlContent = entry[`get${prop}`]();
+					}
+					col.innerHTML = htmlContent;
+					row.appendChild(col);
+				});
+				context.table.appendChild(row);
+
+				// Render children rows
+				if(entry.kind.toLowerCase() === 'folder' && Array.isArray(entry.children)){
+					let entries = context.getSortedEntries(entry.children);
+					renderEntries(context, entries, entry.id, entry.expanded, indent_level+1);
+				}
+
 			});
-			this.table.appendChild(row);
-		});
+		})(this, entries);
 
 		// Add header event listener
 		this.table.querySelectorAll(`.ft-th > div`).forEach(th=>{
 			th.addEventListener('click', e=>{
 				e.preventDefault();
-				let col = 'Name';
-				if(e.target.classList.contains('ft-td-size')) col = 'Size';
-				if(e.target.classList.contains('ft-td-kind')) col = 'Kind';
-				if(e.target.classList.contains('ft-td-date')) col = 'Date';
-				if(col === this.sort_col){
-					this.sort_dir = this.sort_dir === 'asc' ? 'desc' : 'asc';
-				}else{
-					this.sort_dir = 'asc';
+				let col;
+				if(e.currentTarget.classList.contains('ft-td-size')) col = 'Size';
+				if(e.currentTarget.classList.contains('ft-td-kind')) col = 'Kind';
+				if(e.currentTarget.classList.contains('ft-td-date')) col = 'Date';
+				if(e.currentTarget.classList.contains('ft-td-name')) col = 'Name';
+				if(col){
+					if(col === this.sort_col){
+						this.sort_dir = this.sort_dir === 'asc' ? 'desc' : 'asc';
+					}else{
+						this.sort_dir = 'asc';
+					}
+					this.sort_col = col;
+					this.renderTable();
 				}
-				this.sort_col = col;
-				this.renderTable();
+				
 			});
 		});
 
 		// Add folder event listener
 		this.table.querySelectorAll(`.ft-name-span`).forEach(na=>{
-			na.addEventListener('click', e=>{
+			na.addEventListener('click', async e=>{
 				e.preventDefault();
-				let arr = na.parentElement.querySelector('.fa-angle-right');
-				this.animate(arr, 'transform', 0, 90, v=>`rotate(${v}deg)`, 150);
+				let entry_id = na.parentElement.parentElement.dataset.eid;
+				let entry = this.entries_map[entry_id];
+
+				if(entry.kind === 'Folder'){
+					if(entry.expanded){
+						let promises = this.user_callbacks['folder.collapse'].map(cb=>{
+							return Promise.resolve(cb(entry));
+						});
+						await Promise.all(promises);
+
+						// if the user callback re-rendered the table, our reference to `na` will be lost
+						// so we need to find it again
+						let row = document.querySelector(`.ft-tr[data-eid="${entry_id}"]`);
+						na = row.querySelector(`.ft-name-span`);
+
+						let arr = na.parentElement.querySelector('.fa-angle-right');
+						await this.animate(arr, 'transform', 90, 0, v=>`rotate(${v}deg)`, 150);
+
+						// hide the children entries
+						document.querySelectorAll(`.ft-tr[data-pid="${entry_id}"]`).forEach(child_row=>{
+							child_row.style.display = 'none';
+						});
+
+						entry.expanded = false;
+					}else{
+						// Expand a folder
+						let promises = this.user_callbacks['folder.expand'].map(cb=>{
+							return Promise.resolve(cb(entry));
+						});
+						await Promise.all(promises);
+
+						// if the user callback re-rendered the table, our reference to `na` will be lost
+						// so we need to find it again
+						let row = document.querySelector(`.ft-tr[data-eid="${entry_id}"]`);
+						na = row.querySelector(`.ft-name-span`);
+
+						let arr = na.parentElement.querySelector('.fa-angle-right');
+						await this.animate(arr, 'transform', 0, 90, v=>`rotate(${v}deg)`, 150);
+
+						// show the children entries
+						document.querySelectorAll(`.ft-tr[data-pid="${entry_id}"]`).forEach(child_row=>{
+							child_row.style.display = null;
+						});			
+
+						entry.expanded = true;
+					}
+				}else{
+					// File is clicked
+					let promises = this.user_callbacks['file.click'].map(cb=>{
+						return Promise.resolve(cb(entry));
+					});
+					await Promise.all(promises);
+				}
+				
 			});
 		});
 	}
 
-	addEntries(entries) {
-		this.entries.push(...entries.map(e=>{
+	addEntries(entries, parent_entry=null) {
+		let entry_array;
+		if(parent_entry){
+			if(!parent_entry.children) parent_entry.children = [];
+			entry_array = parent_entry.children;
+		}else{
+			entry_array = this.entries;
+		}
+		entry_array.push(...entries.map(e=>{
 			e.id = this.entry_counter;
+			e.parent = parent_entry;
+			this.entries_map[e.id] = e;
 			this.entry_counter++;
 			return e;
 		}));
@@ -195,6 +324,25 @@ let data = [
 ];
 
 let ele = document.querySelector('#fstable');
+
 let fsTable = new FSTable(ele);
+
+fsTable.on('folder.expand', function(entry){
+	document.getElementById('last_action').innerHTML = `Expanded folder: ${entry.getPath()}`;
+	if(!entry.children){
+		fsTable.addEntries([
+			new FSEntry("anpther test.png", 123437451, "Image", 123431234),
+			new FSEntry("ntoes.xls", null, "Spreadsheet", 345653456),
+		], entry);
+	}
+});
+
+fsTable.on('folder.collapse', function(entry){
+	document.getElementById('last_action').innerHTML = `Collapsed folder: ${entry.getPath()}`;
+});
+
+fsTable.on('file.click', function(entry){
+	document.getElementById('last_action').innerHTML = `File clicked: ${entry.getPath()}`;
+});
 
 fsTable.addEntries(data);
