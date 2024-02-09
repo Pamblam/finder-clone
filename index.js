@@ -143,7 +143,7 @@ class FSTable {
 			na.addEventListener('click', e=>{
 				e.preventDefault();
 				let arr = na.parentElement.querySelector('.fa-angle-right');
-				this.animate(arr, 'transform', 0, 90, v=>`rotate(${v}deg)`, 500);
+				this.animate(arr, 'transform', 0, 90, v=>`rotate(${v}deg)`, 150);
 			});
 		});
 	}

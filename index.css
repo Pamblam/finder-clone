@@ -38,7 +38,7 @@
   }
 
   .ft-td-name{
-	width: calc(50% - 1em);
+	width: calc(50% - 1.5em);
 	color: rgb(222, 222, 222);
   }
   
@@ -48,7 +48,7 @@
   }
   
   .ft-td-size, .ft-td-kind{
-	width: calc(12.5% - 1em);
+	width: calc(12.5% - 2em);
 	color: rgb(154, 154, 153);
   }
   
