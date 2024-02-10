@@ -46,7 +46,7 @@ Load some more files when a folder is expanded:
 ```js
 fsTable.on('folder.expand', function(entry){
     // FSEntry.getPath() takes a filesystem separator ('/' by default) and returns the path to the current entry
-	let path = entry.getPath('/');
+    let path = entry.getPath('/');
     let files = await getFiles(path); 
 
     // The second parameter to FSable.addEntries() is the parent entry to add the files to
