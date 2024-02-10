@@ -5,6 +5,7 @@
 	width: 100%;
 	padding: 3px;
 	cursor: pointer;
+	overflow: auto;
   }
   
   .ft-table, .ft-tr{
@@ -60,10 +61,6 @@
   .ft-tr-odd{
 	background-color: rgb(41, 41, 39);
   }
-
-  /* .ft-tr:nth-child(odd){
-	background-color: rgb(41, 41, 39);
-  } */
   
   i.fas{
 	pointer-events: none;
