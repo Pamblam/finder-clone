@@ -107,16 +107,14 @@ class FSTable {
 		this.col_sizes_json = ''; // a string used to keep track of whether or not table col widths have changed
 		ele.replaceWith(this.table);
 
-		let resizeTimer = null;
 		this._onResize = e => {
-			if(resizeTimer){
-				clearTimeout(resizeTimer);
-			} 
-			resizeTimer = setTimeout(async ()=>{
-				console.log("settimeoutexecuted");
-				await this.resizeTable();
-				resizeTimer = null;
-			}, 200);
+			let cols = this.calculateColumnSizes();
+			if(cols === false) return;
+			let [namen, sizen, kindn, daten] = cols;
+			this.table.querySelectorAll(".ft-td-name").forEach(ele=>ele.style.width=`${namen}px`);
+			this.table.querySelectorAll(".ft-td-kind").forEach(ele=>ele.style.width=`${kindn}px`);
+			this.table.querySelectorAll(".ft-td-size").forEach(ele=>ele.style.width=`${sizen}px`);
+			this.table.querySelectorAll(".ft-td-date").forEach(ele=>ele.style.width=`${daten}px`);
 		};
 		addEventListener("resize", this._onResize);
 	}
@@ -189,10 +187,7 @@ class FSTable {
 		return this.getActualWidth(this.table.querySelector(".ft-tr")) - this.getAllColsMPB();
 	}
 
-	async resizeTable(){
-		if(this.resizing) return;
-		this.resizing = true;
-
+	calculateColumnSizes(){
 		// Get the minimum required widths of all the columns in order to prevent any overflow
 		let mins = this.getAllMinWidths();
 		let totala = this.getAvailableTableWidth();
@@ -202,7 +197,7 @@ class FSTable {
 		let col_sizes_json = JSON.stringify([totala, ...mins]);
 		if(this.col_sizes_json === col_sizes_json){
 			this.resizing = false; 
-			return;
+			return false;
 		} 
 		this.col_sizes_json = col_sizes_json;
 
@@ -249,6 +244,21 @@ class FSTable {
 		this.col_widths.size = sizen;
 		this.col_widths.kind = kindn;
 		this.col_widths.date = daten;
+
+		return [namen, sizen, kindn, daten, namea, sizea, kinda, datea];
+	}
+
+	async resizeTable(){
+		if(this.resizing) return;
+		this.resizing = true;
+
+		let cols = this.calculateColumnSizes();
+		if(cols === false){
+			this.resizing = false;
+			return false;
+		}
+
+		let [namen, sizen, kindn, daten, namea, sizea, kinda, datea] = cols;
 
 		// Change all the sizes
 		let name_cols = [...this.table.querySelectorAll(".ft-td-name")];
