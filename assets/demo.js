@@ -15,7 +15,6 @@ fsTable.on('folder.expand', function(entry){
 	let path = entry.getPath();
 	document.getElementById('last_action').innerHTML = `Expanded folder: ${path}`;
 	if(!entry.children){
-
 		if('/my docs/' === path){
 			fsTable.addEntries([
 				new FSEntry("anpther test.png", 123437451, "Image", 123431234),
@@ -23,15 +22,12 @@ fsTable.on('folder.expand', function(entry){
 				new FSEntry("favorite files", null, "Folder", 345657456),
 			], entry);
 		}
-
 		if('/my docs/favorite files/' === path){
 			fsTable.addEntries([
 				new FSEntry("my presentation.ppt", 123437451, "Powerpoint", 123431234),
 				new FSEntry("nintendo cheat codes.txt", 123939451, "File", 345653456)
 			], entry);
 		}
-
-		
 	}
 });
 
@@ -41,6 +37,10 @@ fsTable.on('folder.collapse', function(entry){
 
 fsTable.on('file.click', function(entry){
 	document.getElementById('last_action').innerHTML = `File clicked: ${entry.getPath()}`;
+});
+
+fsTable.on('row.click', function(entry){
+	document.getElementById('last_action').innerHTML = `Row clicked: ${entry.getPath()}`;
 });
 
 fsTable.addEntries(data);

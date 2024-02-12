@@ -77,3 +77,7 @@
   .ft-clear{
 	clear: both;
   }
+
+  .ft-tr.active{
+	background-color: rgb(15, 79, 203);
+  }

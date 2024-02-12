@@ -11,7 +11,8 @@ class FSTable {
 		this.user_callbacks = {
 			'folder.expand': [],
 			'folder.collapse': [],
-			'file.click': []
+			'file.click': [],
+			'row.click': []
 		};
 		this.onExpand = onExpand;
 		this.col_widths = {};
@@ -156,7 +157,10 @@ class FSTable {
 		this.col_widths.kind = kindn;
 		this.col_widths.date = daten;
 
-		return [namen, sizen, kindn, daten, namea, sizea, kinda, datea];
+		return [
+			namen, sizen, kindn, daten, // New column sizes
+			namea, sizea, kinda, datea  // Current column sizes
+		];
 	}
 
 	async resizeTable(){
@@ -169,7 +173,10 @@ class FSTable {
 			return false;
 		}
 
-		let [namen, sizen, kindn, daten, namea, sizea, kinda, datea] = cols;
+		let [
+			namen, sizen, kindn, daten, // New column sizes
+			namea, sizea, kinda, datea  // Current column sizes
+		] = cols;
 
 		// Change all the sizes
 		let name_cols = [...this.table.querySelectorAll(".ft-td-name")];
@@ -194,6 +201,15 @@ class FSTable {
 			if(a > b) return this.sort_dir === 'asc' ? 1 : -1;
 			if(a < b) return this.sort_dir === 'asc' ? -1 : 1;
 		});
+	}
+
+	selectEntry(entry){
+		Object.keys(this.entries_map).forEach(id=>{
+			this.entries_map[id].selected = entry === this.entries_map[id];
+		});
+		this.table.querySelectorAll(`.ft-tr.active`).forEach(row=>row.classList.remove('active'));
+		let row = this.table.querySelector(`.ft-tr[data-eid='${entry.id}']`);
+		if(row) row.classList.add('active');
 	}
 
 	renderTable(){
@@ -288,13 +304,38 @@ class FSTable {
 			});
 		});
 
+		// Add row click event listener
+		this.table.querySelectorAll(`.ft-tr`).forEach(tr=>{
+			tr.addEventListener('click', async e=>{
+				e.preventDefault();
+
+				// If the clicked element is part of the name span, we do nothing.
+				let ele = e.target;
+				while(true){
+					if(ele.classList.contains('ft-name-span')) return;
+					if(ele.classList.contains('ft-tr')) break;
+					ele = ele.parentElement;
+				}
+
+				let entry_id = tr.dataset.eid;
+				let entry = this.entries_map[entry_id];
+				this.selectEntry(entry);
+	
+				let promises = this.user_callbacks['row.click'].map(cb=>{
+					return Promise.resolve(cb(entry));
+				});
+				await Promise.all(promises);
+			});
+		});
+
 		// Add folder event listener
 		this.table.querySelectorAll(`.ft-name-span`).forEach(na=>{
 			na.addEventListener('click', async e=>{
 				e.preventDefault();
 				let entry_id = na.parentElement.parentElement.dataset.eid;
 				let entry = this.entries_map[entry_id];
-
+				this.selectEntry(entry);
+				
 				if(entry.kind === 'Folder'){
 					if(entry.expanded){
 						let promises = this.user_callbacks['folder.collapse'].map(cb=>{

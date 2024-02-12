@@ -7,6 +7,7 @@ class FSEntry {
 		this.children = null;
 		this.parent = null;
 		this.expanded = false;
+		this.selected = false;
 	}
 
 	getIcon() {
