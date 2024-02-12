@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+const UglifyJS = require("uglify-js");
+const CleanCSS = require('clean-css');
+const path = require('path');
+const fs = require('fs');
+
+// Get and incremenet the build number
+let package = JSON.parse(fs.readFileSync(path.join(__dirname, '../', 'package.json'), {encoding:'utf8', flag:'r'}));
+let [version, subversion, buildno] = package.version.split('.').map(n=>+n);
+buildno++; buildno = `${buildno}`.padStart(3, '0');
+package.version = `${version}.${subversion}.${buildno}`;
+fs.writeFileSync(path.join(__dirname, '../', 'package.json'), JSON.stringify(package, null, 2));
+
+// Minify the Javascript
+let FSEntry_code = fs.readFileSync(path.join(__dirname, '../', 'src', 'FSEntry.js'), {encoding:'utf8', flag:'r'});
+let FSTable_code = fs.readFileSync(path.join(__dirname, '../', 'src', 'FSTable.js'), {encoding:'utf8', flag:'r'});
+FSTable_code = FSTable_code.replace(`static version = null;`, `static version = '${package.version}'`);
+var jsresult = UglifyJS.minify({
+	'FSEntry.js': FSEntry_code,
+	'FSTable.js': FSTable_code
+});
+if(jsresult.error) throw result.error;
+let jsheader = `// finder-clone - version ${package.version} - https://github.com/Pamblam/finder-clone\n`;
+fs.writeFileSync(path.join(__dirname, '../', 'dist', 'FSTable.min.js'), `${jsheader}${jsresult.code}`);
+
+// Minify the CSS
+let css_code = fs.readFileSync(path.join(__dirname, '../', 'src', 'FSTable.css'), {encoding:'utf8', flag:'r'});
+var cssresult = new CleanCSS({}).minify(css_code);
+let cssheader = `/* finder-clone - version ${package.version} - https://github.com/Pamblam/finder-clone */\n`;
+fs.writeFileSync(path.join(__dirname, '../', 'dist', 'FSTable.min.css'), `${cssheader}${cssresult.styles}`);
