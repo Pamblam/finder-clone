@@ -4,16 +4,16 @@ A responsive, animated filesystem table based loosely on Mac's Finder.
 
 Demo: https://pamblam.github.io/finder-clone/
 
-![](FSTable.gif)
+![](assets/FSTable.gif)
 
 # Usage
 
-Add the CSS and JS to your page (Need Fontawesome 6, too):
+Grab a copy of the JS and CSS from the `/dist` folder and add them to your page (Need Fontawesome 6, too):
 
 ```html
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-<link rel="stylesheet" href="./FSTable.css" />
-<script src="FSTable.js" type="module"></script>
+<link rel="stylesheet" href="./FSTable.min.css" />
+<script src="FSTable.min.js" type="module"></script>
 ```
 
 Add a div to your HTML that will serve as the file system table:
