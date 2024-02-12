@@ -1,4 +1,4 @@
-import { FSEntry, FSTable } from "./FSTable.js";
+import { FSEntry, FSTable } from "../dist/FSTable.min.js";
 
 let data = [
 	new FSEntry("item 1.png", 123432451, "Image", 123451234),
