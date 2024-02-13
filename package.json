@@ -1,6 +1,6 @@
 {
   "name": "finder-clone",
-  "version": "1.0.021",
+  "version": "1.1.062",
   "description": "A responsive, animated filesystem table based loosely on Mac's Finder.",
   "main": "index.js",
   "scripts": {

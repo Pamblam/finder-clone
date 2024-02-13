@@ -1,0 +1,51 @@
+{
+	"item 1.png": {
+		"bytes": 123432451,
+		"type": "Image",
+		"unix_timestamp": 123451234
+	},
+	"my docs": {
+		"bytes": null,
+		"type": "Folder",
+		"unix_timestamp": 345653456,
+		"children": {
+			"anpther test.png": {
+				"bytes": 123437451,
+				"type": "Image",
+				"unix_timestamp": 123431234
+			},
+			"ntoes.xls": {
+				"bytes": 123439451,
+				"type": "Spreadsheet",
+				"unix_timestamp": 345653456
+			},
+			"favorite files": {
+				"bytes": null,
+				"type": "Folder",
+				"unix_timestamp": 345657456,
+				"children": {
+					"my presentation.ppt": {
+						"bytes": 123437451,
+						"type": "Powerpoint",
+						"unix_timestamp": 123431234
+					},
+					"nintendo cheat codes.txt": {
+						"bytes": 123939451,
+						"type": "File",
+						"unix_timestamp": 345653456
+					}
+				}
+			}
+		}
+	},
+	"my file.docx": {
+		"bytes": 1423452344,
+		"type": "Document",
+		"unix_timestamp": 123412634
+	},
+	"video.mp4": {
+		"bytes": 12312,
+		"type": "Video",
+		"unix_timestamp": 123413234
+	}
+}

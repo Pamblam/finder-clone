@@ -44,7 +44,7 @@ class FSEntry {
 		let opacity = this.kind.toLowerCase() == 'folder' ? '1' : `0`;
 		let rotation = this.expanded ? 90 : 0;
 		let carat_style = `style="opacity: ${opacity}; transform: rotate(${rotation}deg);"`;
-		let carat = `<i class="fa-solid fa-angle-right" ${carat_style}></i>`;
+		let carat = `<i class="fa-solid fa-angle-right folder-carat" ${carat_style}></i>`;
 		let indent = "&nbsp;&nbsp;&nbsp;&nbsp;".repeat(indent_level);
 		return `<span class='ft-name-span'>${indent}${carat} ${this.getIcon()} ${this.name}</span>`;
 	}

@@ -8,17 +8,23 @@ class FSTable {
 		this.table.classList.add('ft-table');
 		this.sort_col = 'Name';
 		this.sort_dir = 'asc';
+		this.ctxmenu = null;
+		this.conextMenuOpts = [];
 		this.user_callbacks = {
 			'folder.expand': [],
 			'folder.collapse': [],
-			'file.click': [],
-			'row.click': []
+			'row.click': [],
+			'table.sort': [],
+			'row.dblclick': [],
+			'row.ctxmenu': []
 		};
 		this.onExpand = onExpand;
 		this.col_widths = {};
 		this.col_sizes_json = ''; // a string used to keep track of whether or not table col widths have changed
 		ele.replaceWith(this.table);
 
+		// Set up the resize event
+		// resize the table when the page is resized
 		this._onResize = e => {
 			let cols = this.calculateColumnSizes();
 			if(cols === false) return;
@@ -27,8 +33,62 @@ class FSTable {
 			this.table.querySelectorAll(".ft-td-kind").forEach(ele=>ele.style.width=`${kindn}px`);
 			this.table.querySelectorAll(".ft-td-size").forEach(ele=>ele.style.width=`${sizen}px`);
 			this.table.querySelectorAll(".ft-td-date").forEach(ele=>ele.style.width=`${daten}px`);
+			this.removeCtxMenu();
 		};
 		addEventListener("resize", this._onResize);
+
+		// Set up the document click event
+		// remove the context menu if there is a click outside of it
+		this._onClick = e => {
+			if(this.ctxmenu){
+				let ele = e.target;
+				while(true){
+					if(ele === this.ctxmenu) return;
+					if(!ele.parentElement) break;
+					ele = ele.parentElement;
+				}
+				this.removeCtxMenu();
+			}
+		};
+		addEventListener('click', this._onClick);
+
+		// remove the context menu if there is another right click outside of the table rows
+		this._onCtxmenu = e => {
+			if(this.ctxmenu){
+
+				// if the right click occurs inside the existing context menu, cancel it
+				let ele = e.target;
+				while(true){
+					if(ele.classList.contains('ft-contextmenu')){
+						e.preventDefault();
+						e.stopPropagation();
+						return false;
+					}
+					if(!ele.parentElement) break;
+					ele = ele.parentElement;
+				}
+
+				// if the right-click happens in the table rows, remove the existing menu
+				ele = e.target;
+				while(true){
+					if(ele.classList.contains('ft-tr')) return;
+					if(!ele.parentElement) break;
+					ele = ele.parentElement;
+				}
+				this.removeCtxMenu();
+			}
+		};
+		addEventListener('contextmenu', this._onCtxmenu, false);
+	}
+
+	destroy(){
+		removeEventListener("resize", this._onResize);
+		removeEventListener("click", this._onClick);
+		removeEventListener("contextmenu", this._onCtxmenu);
+	}
+
+	setContextMenuOptions(opts){
+		this.conextMenuOpts = opts;
 	}
 
 	on(event, callback){
@@ -246,6 +306,9 @@ class FSTable {
 				let row = document.createElement('div');
 				row.dataset.eid = entry.id;
 				row.classList.add('ft-tr');
+				if(entry.selected){
+					row.classList.add('active');
+				}
 				if(!parent_expanded || ancestor_collapsed){
 					row.style.display = 'none';
 					ancestor_collapsed = true;
@@ -284,7 +347,7 @@ class FSTable {
 
 		// Add header event listener
 		this.table.querySelectorAll(`.ft-th > div`).forEach(th=>{
-			th.addEventListener('click', e=>{
+			th.addEventListener('click', async e=>{
 				e.preventDefault();
 				let col;
 				if(e.currentTarget.classList.contains('ft-td-size')) col = 'Size';
@@ -301,19 +364,26 @@ class FSTable {
 					this.renderTable();
 				}
 				
+				let promises = this.user_callbacks['table.sort'].map(cb=>{
+					return Promise.resolve(cb(this.sort_col, this.sort_dir));
+				});
+				await Promise.all(promises);
+
 			});
 		});
 
-		// Add row click event listener
+		// Add row listeners
 		this.table.querySelectorAll(`.ft-tr`).forEach(tr=>{
+
+			// Row clicked event listener
 			tr.addEventListener('click', async e=>{
 				e.preventDefault();
 
-				// If the clicked element is part of the name span, we do nothing.
+				// don't do anything if the carat is clicked
 				let ele = e.target;
 				while(true){
-					if(ele.classList.contains('ft-name-span')) return;
-					if(ele.classList.contains('ft-tr')) break;
+					if(ele.classList.contains('folder-carat')) return;
+					if(!ele.parentElement) break;
 					ele = ele.parentElement;
 				}
 
@@ -326,16 +396,76 @@ class FSTable {
 				});
 				await Promise.all(promises);
 			});
-		});
 
-		// Add folder event listener
-		this.table.querySelectorAll(`.ft-name-span`).forEach(na=>{
-			na.addEventListener('click', async e=>{
+			// Row double clicked event listener
+			tr.addEventListener("dblclick", async e=>{
 				e.preventDefault();
-				let entry_id = na.parentElement.parentElement.dataset.eid;
+
+				let entry_id = tr.dataset.eid;
 				let entry = this.entries_map[entry_id];
 				this.selectEntry(entry);
+	
+				let promises = this.user_callbacks['row.dblclick'].map(cb=>{
+					return Promise.resolve(cb(entry));
+				});
+				await Promise.all(promises);
+			});
+
+			// Row right-clicked event listener
+			tr.addEventListener("contextmenu", async e=>{
+				e.preventDefault();
+
+				this.removeCtxMenu();
+
+				// Get cursor position
+				let x, y, de = document.documentElement, bd = document.body;
+				if (e.pageX) x = e.pageX;
+				else if (e.clientX) x = e.clientX + (de.scrollLeft ? de.scrollLeft : db.scrollLeft);
+				if (e.pageY) y = e.pageY;
+				else if (e.clientY) y = e.clientY + (de.scrollTop ? de.scrollTop : db.scrollTop);
 				
+				let entry_id = tr.dataset.eid;
+				let entry = this.entries_map[entry_id];
+
+				let promises = this.user_callbacks['row.ctxmenu'].map(cb=>{
+					return Promise.resolve(cb(entry));
+				});
+				await Promise.all(promises);
+
+				if(this.conextMenuOpts.length){
+					tr.classList.add('outlined');
+					this.ctxmenu = document.createElement('div');
+					this.ctxmenu.classList.add('ft-contextmenu');
+					this.ctxmenu.style.top = `${y-3}px`;
+					this.ctxmenu.style.left = `${x}px`;
+					this.ctxmenu.innerHTML = this.conextMenuOpts.map((opt, idx)=>{
+						if(opt === '-'){
+							return `<hr>`;
+						}else{
+							return `<div class='ft-context-item' data-idx='${idx}'>${opt.label}</div>`;
+						}
+					}).join('');
+					document.body.append(this.ctxmenu);
+					this.ctxmenu.querySelectorAll('.ft-context-item').forEach(ele=>{
+						ele.addEventListener('click', e=>{
+							e.preventDefault();
+							this.removeCtxMenu();
+							this.conextMenuOpts[ele.dataset.idx].action();
+						});
+					});
+				}
+
+
+				return false;
+			}, false);
+
+		});
+
+		this.table.querySelectorAll('.folder-carat').forEach(ct=>{
+			ct.addEventListener('click', async e=>{
+				e.preventDefault();
+				let entry_id = ct.parentElement.parentElement.parentElement.dataset.eid;
+				let entry = this.entries_map[entry_id];
 				if(entry.kind === 'Folder'){
 					if(entry.expanded){
 						let promises = this.user_callbacks['folder.collapse'].map(cb=>{
@@ -346,10 +476,9 @@ class FSTable {
 						// if the user callback re-rendered the table, our reference to `na` will be lost
 						// so we need to find it again
 						let row = document.querySelector(`.ft-tr[data-eid="${entry_id}"]`);
-						na = row.querySelector(`.ft-name-span`);
+						ct = row.querySelector(`.folder-carat`);
 
-						let arr = na.parentElement.querySelector('.fa-angle-right');
-						await this.animate(arr, 'transform', 90, 0, v=>`rotate(${v}deg)`, 150);
+						await this.animate(ct, 'transform', 90, 0, v=>`rotate(${v}deg)`, 150);
 
 						// hide ALL the children entries
 						this.getAllChildrenIds(entry).forEach(entry_id=>{
@@ -359,7 +488,6 @@ class FSTable {
 						entry.expanded = false;
 						this.addTableStripes();
 						this.resizeTable();
-
 					}else{
 						// Expand a folder
 						let promises = this.user_callbacks['folder.expand'].map(cb=>{
@@ -370,10 +498,9 @@ class FSTable {
 						// if the user callback re-rendered the table, our reference to `na` will be lost
 						// so we need to find it again
 						let row = document.querySelector(`.ft-tr[data-eid="${entry_id}"]`);
-						na = row.querySelector(`.ft-name-span`);
+						ct = row.querySelector(`.folder-carat`);
 
-						let arr = na.parentElement.querySelector('.fa-angle-right');
-						await this.animate(arr, 'transform', 0, 90, v=>`rotate(${v}deg)`, 150);
+						await this.animate(ct, 'transform', 0, 90, v=>`rotate(${v}deg)`, 150);
 
 						// show the children entries that are expanded
 						(function iterateChildren(e, shown){
@@ -392,18 +519,19 @@ class FSTable {
 						this.addTableStripes();
 						this.resizeTable();
 					}
-				}else{
-					// File is clicked
-					let promises = this.user_callbacks['file.click'].map(cb=>{
-						return Promise.resolve(cb(entry));
-					});
-					await Promise.all(promises);
 				}
-				
 			});
 		});
 
 		this.resizeTable();
+	}
+
+	removeCtxMenu(){
+		this.table.querySelectorAll('.ft-tr.outlined').forEach(r=>r.classList.remove('outlined'));
+		if(this.ctxmenu){
+			this.ctxmenu.remove();
+			this.ctxmenu = null;
+		}
 	}
 
 	addTableStripes(){
@@ -434,6 +562,21 @@ class FSTable {
 			}
 		})(entry);
 		return ids;
+	}
+
+	clearEntries(){
+		this.entries = [];
+		this.entries_map = {};
+		this.entry_counter = 0;
+	}
+
+	removeEntry(entry){
+		if(entry.kind === 'Folder' && entry.children){
+			entry.children.forEach(entry=>this.removeEntry(entry));
+		}
+		if(entry.parent) entry.parent.children = entry.parent.children.filter(ch=>ch!==entry);
+		this.entries = this.entries.filter(ch=>ch!==entry);
+		delete this.entries_map[entry.id];
 	}
 
 	addEntries(entries, parent_entry=null) {

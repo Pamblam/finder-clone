@@ -1,46 +1,106 @@
 import { FSEntry, FSTable } from "../dist/FSTable.min.js";
 
-let data = [
-	new FSEntry("item 1.png", 123432451, "Image", 123451234),
-	new FSEntry("my docs", null, "Folder", 345653456),
-	new FSEntry("my file.docx", 1423452344, "Document", 123412634),
-	new FSEntry("video.mp4", 12312, "Video", 123413234),
-];
-
+// Instantiate the table
+let path_prefix = '';
 let ele = document.querySelector('#fstable');
-
 let fsTable = new FSTable(ele);
 
-fsTable.on('folder.expand', function(entry){
+fsTable.on('folder.expand', async function(entry){
 	let path = entry.getPath();
-	document.getElementById('last_action').innerHTML = `Expanded folder: ${path}`;
+	document.getElementById('last_action').insertAdjacentHTML('afterbegin', `<div>Expanded folder: ${path}</div>`);
+
+	// If this folder hasn't been loaded yet, load it's children
 	if(!entry.children){
-		if('/my docs/' === path){
-			fsTable.addEntries([
-				new FSEntry("anpther test.png", 123437451, "Image", 123431234),
-				new FSEntry("ntoes.xls", 123439451, "Spreadsheet", 345653456),
-				new FSEntry("favorite files", null, "Folder", 345657456),
-			], entry);
-		}
-		if('/my docs/favorite files/' === path){
-			fsTable.addEntries([
-				new FSEntry("my presentation.ppt", 123437451, "Powerpoint", 123431234),
-				new FSEntry("nintendo cheat codes.txt", 123939451, "File", 345653456)
-			], entry);
-		}
+		let files = await getFiles(path);
+		let fsEntries = files.map(f=>new FSEntry(f.basename, f.bytes, f.type, f.unix_timestamp));
+		fsTable.addEntries(fsEntries, entry);
+	} 
+});
+
+fsTable.on('row.ctxmenu', function(entry){
+	let path = entry.getPath();
+	document.getElementById('last_action').insertAdjacentHTML('afterbegin', `<div>Context menu opened for: ${path}</div>`);
+
+	let opts = [
+		{label: 'Get path', action(){ alert(path); }},
+		{label: 'Get name', action(){ alert(entry.name); }},
+		'-',
+		{label: 'Delete', action(){ 
+			fsTable.removeEntry(entry);
+			fsTable.renderTable();
+		}}
+	];
+
+	// Set context menu options
+	if(entry.kind === 'Folder'){
+		opts.push({label: "Add File", async action(){
+			let fname = prompt('Enter a file name:');
+			let fsEntries = [];
+			if(!entry.children){
+				let files = await getFiles(path);
+				fsEntries = files.map(f=>new FSEntry(f.basename, f.bytes, f.type, f.unix_timestamp));
+				fsTable.addEntries(fsEntries, entry);
+			}
+			fsEntries.push(new FSEntry(fname, 0, 'File', new Date().getTime()/1000 ));
+			fsTable.addEntries(fsEntries, entry);
+			fsTable.renderTable();
+		}});
+	}else{
+		opts.push({label: 'Rename', action(){ 
+			entry.name = prompt('Enter new name:');
+			fsTable.renderTable();
+		}});
 	}
+
+	fsTable.setContextMenuOptions(opts);
 });
 
 fsTable.on('folder.collapse', function(entry){
-	document.getElementById('last_action').innerHTML = `Collapsed folder: ${entry.getPath()}`;
-});
-
-fsTable.on('file.click', function(entry){
-	document.getElementById('last_action').innerHTML = `File clicked: ${entry.getPath()}`;
+	let path = entry.getPath();
+	document.getElementById('last_action').insertAdjacentHTML('afterbegin', `<div>Collapsed folder: ${path}</div>`);
 });
 
 fsTable.on('row.click', function(entry){
-	document.getElementById('last_action').innerHTML = `Row clicked: ${entry.getPath()}`;
+	let path = entry.getPath();
+	document.getElementById('last_action').insertAdjacentHTML('afterbegin', `<div>Row clicked: ${path}</div>`);
 });
 
-fsTable.addEntries(data);
+fsTable.on('table.sort', function(column, direction){
+	document.getElementById('last_action').insertAdjacentHTML('afterbegin', `<div>Table sorted by ${column}, ${direction}</div>`);
+});
+
+fsTable.on('row.dblclick', async function(entry){
+	let path = entry.getPath();
+	if(entry.kind === 'Folder'){
+		let fsEntries;
+		if(entry.children){
+			fsEntries = entry.children;
+		}else{
+			let files = await getFiles(path);
+			fsEntries = files.map(f=>new FSEntry(f.basename, f.bytes, f.type, f.unix_timestamp));
+		}
+		path_prefix = path.substring(0, path.length-1);
+		fsTable.clearEntries();
+		fsTable.addEntries(fsEntries);
+	}else{
+		console.log(`Download ${path}`);
+	}
+	document.getElementById('last_action').insertAdjacentHTML('afterbegin', `<div>Row double clicked: ${path}</div>`);
+});
+
+// Load the root directory
+let files = await getFiles('/');
+let fsEntries = files.map(f=>new FSEntry(f.basename, f.bytes, f.type, f.unix_timestamp));
+fsTable.addEntries(fsEntries);
+
+async function getFiles(path){
+	path = (path_prefix+path).split('/').filter(p=>!!p);
+	let files = await fetch('./assets/filesystem.json').then(r=>r.json());
+	for(let i=0; i<path.length; i++) files = files[path[i]].children;
+	return Object.keys(files).map(basename=>({
+		basename, 
+		type: files[basename].type, 
+		bytes: files[basename].bytes, 
+		unix_timestamp: files[basename].unix_timestamp
+	}));
+}
