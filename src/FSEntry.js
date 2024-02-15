@@ -9,6 +9,7 @@ class FSEntry {
 		this.expanded = false;
 		this.selected = false;
 		this.nameRenderer = nameRenderer;
+		this.prefix = '';
 	}
 
 	getIcon() {
@@ -90,7 +91,7 @@ class FSEntry {
 		}
 		let path = path_separator + path_parts.join(path_separator);
 		if(this.kind === 'Folder') path += path_separator;
-		return path;
+		return `${path_separator}${this.prefix}${path}`.replaceAll(`${path_separator}${path_separator}`, path_separator);
 	}
 }
 export {FSEntry};

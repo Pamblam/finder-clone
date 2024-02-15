@@ -5,7 +5,16 @@ let path_prefix = '';
 let ele = document.querySelector('#fstable');
 let fsTable = new FSTable(ele);
 
-fsTable.on('folder.expand', async function(entry){
+let backbtn = document.getElementById('backbtn');
+backbtn.addEventListener('click', function(){
+	fsTable.back();
+	if(!fsTable.history.length){
+		backbtn.style.display = 'none';
+	}
+});
+
+
+fsTable.on('folder.expand', async function(entry, historyChanged){
 	let path = entry.getPath();
 	document.getElementById('last_action').insertAdjacentHTML('afterbegin', `<div>Expanded folder: ${path}</div>`);
 
@@ -15,6 +24,11 @@ fsTable.on('folder.expand', async function(entry){
 		let fsEntries = files.map(f=>new FSEntry(f.basename, f.bytes, f.type, f.unix_timestamp));
 		fsTable.addEntries(fsEntries, entry);
 	} 
+
+	// Show the back button if the history has been changed
+	if(historyChanged){
+		backbtn.style.display = null;
+	}
 });
 
 fsTable.on('row.ctxmenu', function(entry){
@@ -71,20 +85,6 @@ fsTable.on('table.sort', function(column, direction){
 
 fsTable.on('row.dblclick', async function(entry){
 	let path = entry.getPath();
-	if(entry.kind === 'Folder'){
-		let fsEntries;
-		if(entry.children){
-			fsEntries = entry.children;
-		}else{
-			let files = await getFiles(path);
-			fsEntries = files.map(f=>new FSEntry(f.basename, f.bytes, f.type, f.unix_timestamp));
-		}
-		path_prefix = path.substring(0, path.length-1);
-		fsTable.clearEntries();
-		fsTable.addEntries(fsEntries);
-	}else{
-		console.log(`Download ${path}`);
-	}
 	document.getElementById('last_action').insertAdjacentHTML('afterbegin', `<div>Row double clicked: ${path}</div>`);
 });
 

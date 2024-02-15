@@ -1,8 +1,9 @@
 class FSTable {
 	static version = null;
-	constructor(ele, onExpand) {
+	constructor(ele, prefix) {
 		this.entry_counter = 0;
 		this.table = document.createElement('div');
+		this.prefix = prefix || '';
 		this.entries = [];
 		this.entries_map = {};
 		this.table.classList.add('ft-table');
@@ -18,7 +19,7 @@ class FSTable {
 			'row.dblclick': [],
 			'row.ctxmenu': []
 		};
-		this.onExpand = onExpand;
+		this.history = [];
 		this.col_widths = {};
 		this.col_sizes_json = ''; // a string used to keep track of whether or not table col widths have changed
 		ele.replaceWith(this.table);
@@ -79,6 +80,13 @@ class FSTable {
 			}
 		};
 		addEventListener('contextmenu', this._onCtxmenu, false);
+	}
+
+	back(){
+		if(this.history.length){
+			this.history.pop();
+			this.renderTable();
+		}
 	}
 
 	destroy(){
@@ -300,7 +308,7 @@ class FSTable {
 		this.table.appendChild(header);
 
 		// add the entries
-		let entries = this.getSortedEntries(this.entries);
+		let entries = this.getSortedEntries(this.history.length ? this.history.at(-1).children : this.entries);
 		(function renderEntries(context, entries, parent_id=null, parent_expanded=true, indent_level=0, ancestor_collapsed=false){
 			entries.forEach(entry => {
 				let row = document.createElement('div');
@@ -400,15 +408,22 @@ class FSTable {
 			// Row double clicked event listener
 			tr.addEventListener("dblclick", async e=>{
 				e.preventDefault();
-
 				let entry_id = tr.dataset.eid;
 				let entry = this.entries_map[entry_id];
-				this.selectEntry(entry);
-	
-				let promises = this.user_callbacks['row.dblclick'].map(cb=>{
-					return Promise.resolve(cb(entry));
-				});
-				await Promise.all(promises);
+				if(entry.kind === 'Folder'){
+					let promises = this.user_callbacks['folder.expand'].map(cb=>{
+						return Promise.resolve(cb(entry, true));
+					});
+					await Promise.all(promises);
+					this.history.push(entry);
+					this.renderTable();
+				}else{
+					this.selectEntry(entry);
+					let promises = this.user_callbacks['row.dblclick'].map(cb=>{
+						return Promise.resolve(cb(entry));
+					});
+					await Promise.all(promises);
+				}
 			});
 
 			// Row right-clicked event listener
@@ -503,7 +518,7 @@ class FSTable {
 					}else{
 						// Expand a folder
 						let promises = this.user_callbacks['folder.expand'].map(cb=>{
-							return Promise.resolve(cb(entry));
+							return Promise.resolve(cb(entry, false));
 						});
 						await Promise.all(promises);
 
@@ -616,6 +631,7 @@ class FSTable {
 			entry_array = this.entries;
 		}
 		entry_array.push(...entries.map(e=>{
+			e.prefix = this.prefix;
 			e.id = this.entry_counter;
 			e.parent = parent_entry;
 			this.entries_map[e.id] = e;
