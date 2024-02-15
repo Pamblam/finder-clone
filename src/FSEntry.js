@@ -1,5 +1,5 @@
 class FSEntry {
-	constructor(name, size, kind, date) {
+	constructor(name, size, kind, date, nameRenderer=null) {
 		this.name = name;
 		this.size = size;
 		this.kind = kind;
@@ -8,6 +8,7 @@ class FSEntry {
 		this.parent = null;
 		this.expanded = false;
 		this.selected = false;
+		this.nameRenderer = nameRenderer;
 	}
 
 	getIcon() {
@@ -31,7 +32,7 @@ class FSEntry {
 			case 'audio':
 				return '<i class="fa-solid fa-file-audio"></i>';
 			case 'folder':
-				return '<i class="fa-solid fa-folder"></i>';
+				return '<i class="fa-solid fa-folder ft-folder-icon"></i>';
 			default:
 				return '<i class="fa-solid fa-file"></i>';
 		}
@@ -46,11 +47,12 @@ class FSEntry {
 		let carat_style = `style="opacity: ${opacity}; transform: rotate(${rotation}deg);"`;
 		let carat = `<i class="fa-solid fa-angle-right folder-carat" ${carat_style}></i>`;
 		let indent = "&nbsp;&nbsp;&nbsp;&nbsp;".repeat(indent_level);
-		return `<span class='ft-name-span'>${indent}${carat} ${this.getIcon()} ${this.name}</span>`;
+		let name = 'function' === typeof this.nameRenderer ? this.nameRenderer(this.name) : this.name;
+		return `<span class='ft-name-span'>${indent}${carat} ${this.getIcon()} ${name}</span>`;
 	}
 
 	getSize() {
-		if (!this.size) return '';
+		if (!this.size) return '--';
 		const thresh = 1000;
 		const units = ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 		let bytes = this.size;
@@ -73,6 +75,9 @@ class FSEntry {
 			year: 'numeric',
 			month: 'short',
 			day: 'numeric',
+			hour12: true,
+			hour: 'numeric',
+			minute: '2-digit'
 		});
 	}
 

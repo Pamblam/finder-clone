@@ -475,14 +475,26 @@ class FSTable {
 
 						// if the user callback re-rendered the table, our reference to `na` will be lost
 						// so we need to find it again
-						let row = document.querySelector(`.ft-tr[data-eid="${entry_id}"]`);
+						let row = this.table.querySelector(`.ft-tr[data-eid="${entry_id}"]`);
 						ct = row.querySelector(`.folder-carat`);
-
-						await this.animate(ct, 'transform', 90, 0, v=>`rotate(${v}deg)`, 150);
+						this.animate(ct, 'transform', 90, 0, v=>`rotate(${v}deg)`, 150);
 
 						// hide ALL the children entries
-						this.getAllChildrenIds(entry).forEach(entry_id=>{
-							document.querySelector(`.ft-tr[data-eid="${entry_id}"]`).style.display = 'none';
+						let height = getComputedStyle(row).getPropertyValue("height");
+						height = +height.substring(0, height.length-2);
+						let children = this.getAllChildrenIds(entry).map(eid=>this.table.querySelector(`.ft-tr[data-eid="${eid}"]`));
+						children.forEach(c=>{
+							c.style.height = `${height}px`;
+							c.style.overflowY = 'hidden';
+							c.style.display = null;
+						});
+						await Promise.all(children.map(c=>{
+							return this.animate(c, 'height', height, 0, v=>`${v}px`, 150);
+						}));
+						children.forEach(c=>{
+							c.style.height = null;
+							c.style.overflowY = null;
+							c.style.display = 'none';
 						});
 
 						entry.expanded = false;
@@ -497,23 +509,41 @@ class FSTable {
 
 						// if the user callback re-rendered the table, our reference to `na` will be lost
 						// so we need to find it again
-						let row = document.querySelector(`.ft-tr[data-eid="${entry_id}"]`);
+						let row = this.table.querySelector(`.ft-tr[data-eid="${entry_id}"]`);
 						ct = row.querySelector(`.folder-carat`);
 
-						await this.animate(ct, 'transform', 0, 90, v=>`rotate(${v}deg)`, 150);
+						this.animate(ct, 'transform', 0, 90, v=>`rotate(${v}deg)`, 150);
 
 						// show the children entries that are expanded
+						let table = this.table;
+						let height = getComputedStyle(row).getPropertyValue("height");
+						height = +height.substring(0, height.length-2);
+						let children = [];
 						(function iterateChildren(e, shown){
 							if(Array.isArray(e.children)){
 								e.children.forEach(ch=>{
-									document.querySelector(`.ft-tr[data-eid="${ch.id}"]`).style.display = shown ? null : 'none';
+									let row = table.querySelector(`.ft-tr[data-eid="${ch.id}"]`);
+									if(shown) children.push(row);
+									else row.style.display = 'none';
 									if(ch.kind === 'Folder'){
 										if(!ch.expanded) shown = false;
 										iterateChildren(ch, shown);
 									}
 								});
 							}
-						})(entry, true);		
+						})(entry, true);	
+						children.forEach(c=>{
+							c.style.height = `0px`;
+							c.style.overflowY = 'hidden';
+							c.style.display = null;
+						});
+						await Promise.all(children.map(c=>{
+							return this.animate(c, 'height', 0, height, v=>`${v}px`, 150);
+						}));
+						children.forEach(c=>{
+							c.style.height = null;
+							c.style.overflowY = null;
+						});
 
 						entry.expanded = true;
 						this.addTableStripes();

@@ -35,6 +35,23 @@
 						"unix_timestamp": 345653456
 					}
 				}
+			},
+			"test again": {
+				"bytes": null,
+				"type": "Folder",
+				"unix_timestamp": 345657456,
+				"children": {}
+			},
+			"test.xls": {
+				"bytes": 1423752334,
+				"type": "Spreadsheet",
+				"unix_timestamp": 123512534
+			},
+			"teste": {
+				"bytes": null,
+				"type": "Folder",
+				"unix_timestamp": 123553554,
+				"children": {}
 			}
 		}
 	},

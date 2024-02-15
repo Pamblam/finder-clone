@@ -119,3 +119,7 @@
 .ft-contextmenu hr{
 	border-top: 1px solid rgba(255, 255, 255, .3);
 }
+
+.ft-folder-icon{
+	color: rgb(29,172,227);
+}
