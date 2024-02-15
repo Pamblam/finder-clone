@@ -519,19 +519,17 @@ class FSTable {
 						let height = getComputedStyle(row).getPropertyValue("height");
 						height = +height.substring(0, height.length-2);
 						let children = [];
-						(function iterateChildren(e, shown){
+						(function iterateChildren(e){
 							if(Array.isArray(e.children)){
 								e.children.forEach(ch=>{
 									let row = table.querySelector(`.ft-tr[data-eid="${ch.id}"]`);
-									if(shown) children.push(row);
-									else row.style.display = 'none';
-									if(ch.kind === 'Folder'){
-										if(!ch.expanded) shown = false;
-										iterateChildren(ch, shown);
+									children.push(row);
+									if(ch.kind === 'Folder' && ch.expanded){
+										iterateChildren(ch);
 									}
 								});
 							}
-						})(entry, true);	
+						})(entry);	
 						children.forEach(c=>{
 							c.style.height = `0px`;
 							c.style.overflowY = 'hidden';
