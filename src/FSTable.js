@@ -1,6 +1,6 @@
 class FSTable {
 	static version = null;
-	constructor(ele, prefix) {
+	constructor(ele, prefix, light=false) {
 		this.entry_counter = 0;
 		this.table = document.createElement('div');
 		this.prefix = prefix || '';
@@ -19,6 +19,8 @@ class FSTable {
 			'row.dblclick': [],
 			'row.ctxmenu': []
 		};
+		this.light_mode = light;
+		if(this.light_mode) this.table.classList.add('light');
 		this.history = [];
 		this.col_widths = {};
 		this.col_sizes_json = ''; // a string used to keep track of whether or not table col widths have changed
@@ -80,6 +82,13 @@ class FSTable {
 			}
 		};
 		addEventListener('contextmenu', this._onCtxmenu, false);
+	}
+
+	setLightMode(light=false){
+		this.light_mode = light;
+		if(this.light_mode) this.table.classList.add('light');
+		else this.table.classList.remove('light');
+		this.renderTable();
 	}
 
 	back(){
@@ -451,6 +460,7 @@ class FSTable {
 					tr.classList.add('outlined');
 					this.ctxmenu = document.createElement('div');
 					this.ctxmenu.classList.add('ft-contextmenu');
+					if(this.light_mode) this.ctxmenu.classList.add('light');
 					this.ctxmenu.style.top = `${y-3}px`;
 					this.ctxmenu.style.left = `${x}px`;
 					this.ctxmenu.innerHTML = this.conextMenuOpts.map((opt, idx)=>{

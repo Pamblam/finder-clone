@@ -13,6 +13,10 @@ backbtn.addEventListener('click', function(){
 	}
 });
 
+document.getElementById('mode').addEventListener('input', function(e){
+	fsTable.setLightMode(this.checked);
+	// document.body.style.backgroundColor = this.checked ? '#f2f2f3' : null;
+});
 
 fsTable.on('folder.expand', async function(entry, historyChanged){
 	let path = entry.getPath();
