@@ -3,7 +3,7 @@ import { FSEntry, FSTable } from "../dist/FSTable.min.js";
 // Instantiate the table
 let path_prefix = '';
 let ele = document.querySelector('#fstable');
-let fsTable = new FSTable(ele);
+let fsTable = new FSTable(ele, '', true);
 
 let backbtn = document.getElementById('backbtn');
 backbtn.addEventListener('click', function(){
