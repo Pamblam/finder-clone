@@ -310,7 +310,7 @@ class FSTable {
 	}
 
 	getEntryById(eid){
-		for(i=0; i<this.entries.length; i++){
+		for(let i=0; i<this.entries.length; i++){
 			if(this.entries[i].id == eid){
 				return this.entries[i];
 			}
