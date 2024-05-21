@@ -1,6 +1,6 @@
 class FSTable {
 	static version = null;
-	constructor(ele, prefix, light=false) {
+	constructor(ele, prefix, light=false, fi=false) {
 		this.entry_counter = 0;
 		this.table = document.createElement('div');
 		this.prefix = prefix || '';
@@ -19,6 +19,18 @@ class FSTable {
 			'row.dblclick': [],
 			'row.ctxmenu': []
 		};
+
+		// Validate the optional FI instance, which is here https://github.com/Pamblam/file-input
+		if(fi){
+			if(typeof fi !== 'object' || fi?.constructor?.name !== 'FI'){
+				throw new Error('FI parameter must be an instance of FI: https://github.com/Pamblam/file-input');
+			}
+			if(!this.isVersionGreaterThanOrEqualTo(fi.constructor.version, '2.1.51')){
+				throw new Error('FI versions prior to 2.1.51 are not supported.');
+			}
+		}
+		this.fi = fi;
+
 		this.light_mode = light;
 		if(this.light_mode) this.table.classList.add('light');
 		this.history = [];
@@ -82,6 +94,14 @@ class FSTable {
 			}
 		};
 		addEventListener('contextmenu', this._onCtxmenu, false);
+	}
+
+	isVersionGreaterThanOrEqualTo(evalVersion, targetVersion){
+		let [a1, a2, a3] = evalVersion.split('.').map(e=>+e);
+		let [b1, b2, b3] = targetVersion.split('.').map(e=>+e);
+		if(a1 !== b1) return a1 > b1;
+		if(a2 !== b2) return a2 > b2;
+		return a3 >= b3;
 	}
 
 	setLightMode(light=false){
@@ -289,8 +309,19 @@ class FSTable {
 		if(row) row.classList.add('active');
 	}
 
+	getEntryById(eid){
+		for(i=0; i<this.entries.length; i++){
+			if(this.entries[i].id == eid){
+				return this.entries[i];
+			}
+		}
+		return false;
+	}
+
 	renderTable(){
 		this.table.textContent = '';
+
+		if(this.fi) this.fi.detachAllDragAreas();
 
 		// Render the table header
 		let header = document.createElement('div');
@@ -321,6 +352,7 @@ class FSTable {
 		(function renderEntries(context, entries, parent_id=null, parent_expanded=true, indent_level=0, ancestor_collapsed=false){
 			entries.forEach(entry => {
 				let row = document.createElement('div');
+				if(entry.getKind().toLowerCase() === 'folder' && context.fi) context.fi.attachToDragarea(row, 'active');
 				row.dataset.eid = entry.id;
 				row.classList.add('ft-tr');
 				if(entry.selected){

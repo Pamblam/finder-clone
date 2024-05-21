@@ -1,9 +1,12 @@
 import { FSEntry, FSTable } from "../dist/FSTable.min.js";
+import FI from "./file-input.js";
 
 // Instantiate the table
 let path_prefix = '';
 let ele = document.querySelector('#fstable');
-let fsTable = new FSTable(ele, '', true);
+
+let fi = new FI({multi: true});
+let fsTable = new FSTable(ele, '', false, fi);
 
 let backbtn = document.getElementById('backbtn');
 backbtn.addEventListener('click', function(){
