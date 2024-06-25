@@ -10,6 +10,7 @@ class FSEntry {
 		this.selected = false;
 		this.nameRenderer = nameRenderer;
 		this.prefix = '';
+		this.highlighted = false;
 	}
 
 	getIcon() {

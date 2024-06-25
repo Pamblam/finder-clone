@@ -91,7 +91,7 @@ i.fas {
   clear: both;
 }
 
-.ft-tr.active {
+.ft-tr.active, .ft-tr.highlighted{
   background-color: rgb(15, 79, 203);
 }
 .ft-tr.outlined {
@@ -165,8 +165,8 @@ i.fas {
   background-color: rgb(242, 242, 243);
 }
 
-.ft-table.light .ft-tr.active {
-  background-color: rgb(0, 89, 221);
+.ft-table.light .ft-tr.active, .ft-table.light .ft-tr.highlighted {
+	background-color: rgb(0, 89, 221);
 }
 
 .ft-table.light .ft-tr.outlined {

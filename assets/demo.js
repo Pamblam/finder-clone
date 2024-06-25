@@ -97,7 +97,11 @@ fsTable.on('row.dblclick', async function(entry){
 
 // Load the root directory
 let files = await getFiles('/');
-let fsEntries = files.map(f=>new FSEntry(f.basename, f.bytes, f.type, f.unix_timestamp));
+let fsEntries = files.map(f=>{
+	let entry = new FSEntry(f.basename, f.bytes, f.type, f.unix_timestamp);
+	if(f.basename === 'my docs' || f.basename === 'video.mp4') entry.highlighted = true;
+	return entry;
+});
 fsTable.addEntries(fsEntries);
 
 async function getFiles(path){

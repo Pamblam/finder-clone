@@ -38,6 +38,8 @@ class FSTable {
 		this.col_sizes_json = ''; // a string used to keep track of whether or not table col widths have changed
 		ele.replaceWith(this.table);
 
+		this.table.addEventListener('click', ()=>this.removeHighlights());
+
 		// Set up the resize event
 		// resize the table when the page is resized
 		this._onResize = e => {
@@ -300,6 +302,34 @@ class FSTable {
 		});
 	}
 
+	removeHighlights(){
+		Object.keys(this.entries_map).forEach(id=>{
+			this.entries_map[id].highlighted = false;
+			let row = this.table.querySelector(`.ft-tr[data-eid='${id}']`);
+			if(row) row.classList.remove('highlighted');
+		});
+	}
+
+	unhighlightEntry(entry){
+		Object.keys(this.entries_map).forEach(id=>{
+			if(entry === this.entries_map[id]){
+				this.entries_map[id].highlighted = false;
+			}
+		});
+		let row = this.table.querySelector(`.ft-tr[data-eid='${entry.id}']`);
+		if(row) row.classList.remove('highlighted');
+	}
+
+	highlightEntry(entry){
+		Object.keys(this.entries_map).forEach(id=>{
+			if(entry === this.entries_map[id]){
+				this.entries_map[id].highlighted = true;
+			}
+		});
+		let row = this.table.querySelector(`.ft-tr[data-eid='${entry.id}']`);
+		if(row) row.classList.add('highlighted');
+	}
+
 	selectEntry(entry){
 		Object.keys(this.entries_map).forEach(id=>{
 			this.entries_map[id].selected = entry === this.entries_map[id];
@@ -352,6 +382,9 @@ class FSTable {
 				row.classList.add('ft-tr');
 				if(entry.selected){
 					row.classList.add('active');
+				}
+				if(entry.highlighted){
+					row.classList.add('highlighted');
 				}
 				if(!parent_expanded || ancestor_collapsed){
 					row.style.display = 'none';
